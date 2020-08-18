@@ -1,7 +1,6 @@
 import React, { useCallback, useContext } from "react";
 import { withRouter, Redirect, NavLink } from "react-router-dom";
 import app from "../firebase.js";
-import { AuthContext } from "../Auth";
 
 function validateForm(name, pass, confPass){
     if(name.replace(/\s/g, "") === ''){

@@ -1,11 +1,11 @@
 import React from "react";
-import app from "../firebase";
+import NavBar from "../navbar";
 
 const Home = () => {
   return (
     <>
+      <NavBar />
       <h3>Dashboard</h3>
-      <button onClick={() => app.auth().signOut()}>Sign out</button>
     </>
   );
 };
