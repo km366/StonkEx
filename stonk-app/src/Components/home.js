@@ -85,11 +85,10 @@ class Home extends React.Component {
         <div className="portfolio">
           <NavBar />
           <h2>Welcome, {name}!</h2>
-          <h5 style={{textAlign: "right", color: "teal"}}>Account Balance: ${money.toLocaleString(undefined, {maximumFractionDigits:2})}</h5>
           <h3>Portfolio</h3>
           {Object.keys(testData).map((data, index) => {
           return (
-            <Card className="text-center">
+            <Card className="text-center" style={{margin: "10px"}}>
               <Card.Body>
                 <Card.Title>{data}</Card.Title>
                 <Card.Subtitle className="mb-2 text-muted">Current Price: ${testData[data].price}</Card.Subtitle>
