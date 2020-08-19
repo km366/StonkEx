@@ -1,10 +1,10 @@
 import React from 'react';
 import { BrowserRouter as Router, Route, Switch, withRouter } from 'react-router-dom';
 import PrivateRoute from './privateRoute';
-import Login from './Components/login';
-import Register from './Components/register';
-import Home from './Components/home';
-import Leaderboard from './Components/leaderboard';
+import Login from '../Components/login';
+import Register from '../Components/register';
+import Home from '../Components/home';
+import Leaderboard from '../Components/leaderboard';
 import { AuthProvider } from "./Auth";
 
 const Routes = withRouter(({ location }) => {

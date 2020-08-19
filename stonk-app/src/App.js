@@ -1,5 +1,5 @@
 import React from 'react';
-import Routes from './routes';
+import Routes from './Utilities/routes';
 import '../node_modules/bootstrap/dist/css/bootstrap.min.css';
 import './App.css';
 
@@ -17,7 +17,7 @@ function App() {
 
 // Kartik: Sample API call
 function sampleAPICall(){
-  let apiFile = require("./env.json");
+  let apiFile = require("./Utilities/env.json");
   let apiKey = apiFile["api_key"];
   let baseUrl = apiFile["base_api_url"];
 
