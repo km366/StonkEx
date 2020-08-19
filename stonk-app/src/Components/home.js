@@ -10,6 +10,7 @@ class Home extends React.Component {
     this.state= {
       loading: true,
       name: '',
+      money: 0,
       testData: {
         stonk1: {
           price: 100,
@@ -56,20 +57,25 @@ class Home extends React.Component {
   }
   getUser = async() => {
     let email = app.auth().currentUser.email;
-    await app.firestore().collection("users").doc(email)
+    app.firestore().collection("users").doc(email)
       .onSnapshot((doc) => {
           let userFirstName = doc.data().fname;
-          this.setState({name: userFirstName, loading: false});
+          this.setState({name: userFirstName});
           console.log(this.state.name);
+      });
+    app.firestore().collection("leaderboard").doc(email)
+      .onSnapshot((doc) => {
+        let userMoney = doc.data().money;
+        this.setState({money: userMoney, loading: false});
+        console.log(this.state.money);
       });
   }
   render() {
-    const { loading, name, testData } = this.state;
+    const { loading, name, testData, money } = this.state;
     if (loading) {
       return (
         <div className="portfolio">
           <NavBar />
-          <h2>Portfolio</h2>
           <Loader type="Circles" color="#2BAD60" height="50" width="50" />
         </div>
       )
@@ -79,9 +85,9 @@ class Home extends React.Component {
         <div className="portfolio">
           <NavBar />
           <h2>Welcome, {name}!</h2>
-          <h4>Your Current Portfolio:</h4>
+          <h5 style={{textAlign: "right", color: "teal"}}>Account Balance: ${money.toLocaleString(undefined, {maximumFractionDigits:2})}</h5>
+          <h3>Portfolio</h3>
           {Object.keys(testData).map((data, index) => {
-            console.log(testData[data].dailyChange)
           return (
             <Card className="text-center">
               <Card.Body>

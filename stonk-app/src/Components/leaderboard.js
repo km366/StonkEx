@@ -24,6 +24,7 @@ class LeaderBoard extends React.Component {
                   m.push(doc.data().money);
               });
               this.setState({lbData: data, loading: false, money: m});
+              //https://stackoverflow.com/questions/14834571/ranking-array-elements
               let tempSorted = this.state.money.slice().sort(function(a,b){return b-a});
               let tempRanks = this.state.money.map(function(v){ return tempSorted.indexOf(v)+1 });
               this.setState ({ranks: tempRanks});
