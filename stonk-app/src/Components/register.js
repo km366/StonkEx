@@ -29,7 +29,9 @@ function addToDB(userEmail, userFirstName, userLastName){
     });
     db.collection("leaderboard").doc(userEmail).set({
         name: userFirstName,
-        money: 10000
+        money: 100000,
+        invested: 0,
+        portfolio: 0
     })
     .then(() => {console.log("Data written!")})
     .catch((err) => {console.log("Error:", err)});

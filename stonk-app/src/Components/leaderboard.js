@@ -21,13 +21,13 @@ class LeaderBoard extends React.Component {
               let m = [];
               querySnap.forEach((doc) => {
                   data.push(doc.data());
-                  m.push(doc.data().money);
+                  m.push(doc.data().money+doc.data().portfolio);
               });
               this.setState({lbData: data, loading: false, money: m});
               //https://stackoverflow.com/questions/14834571/ranking-array-elements
               let tempSorted = this.state.money.slice().sort(function(a,b){return b-a});
               let tempRanks = this.state.money.map(function(v){ return tempSorted.indexOf(v)+1 });
-              this.setState ({ranks: tempRanks});
+              this.setState({ranks: tempRanks});
           });
     }
     render() {
@@ -60,7 +60,7 @@ class LeaderBoard extends React.Component {
                                     <tr>
                                         <td>{ranks[key]}</td>
                                         <td>{data.name}</td>
-                                        <td>{data.money}</td>
+                                        <td>{data.money + data.portfolio}</td>
                                     </tr>
                                 )
                             })

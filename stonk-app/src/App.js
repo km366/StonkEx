@@ -16,12 +16,13 @@ function App() {
 }
 
 // Kartik: Sample API call
-function sampleAPICall(){
+function sampleAPICall(stocks){
   let apiFile = require("./Utilities/env.json");
-  let apiKey = apiFile["api_key"];
+  let randomInt = Math.floor(Math.random() * 5);
+  let apiKey = apiFile["api_key"][randomInt];
   let baseUrl = apiFile["base_api_url"];
 
-  fetch(`${baseUrl}function=GLOBAL_QUOTE&symbol=TSLA&apikey=${apiKey}`, {
+  fetch(`${baseUrl}stable/stock/market/batch?symbols=${stocks}&types=quote&token=${apiKey}`, {
     "method": "GET"
   })
   .then(response => {
@@ -34,5 +35,5 @@ function sampleAPICall(){
     console.log(err);
   });
 }
-
+//console.log(sampleAPICall(['aapl', 'tsla']));
 export default App;

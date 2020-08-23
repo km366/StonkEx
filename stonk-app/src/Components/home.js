@@ -61,17 +61,20 @@ class Home extends React.Component {
       .onSnapshot((doc) => {
           let userFirstName = doc.data().fname;
           this.setState({name: userFirstName});
-          console.log(this.state.name);
       });
     app.firestore().collection("leaderboard").doc(email)
       .onSnapshot((doc) => {
         let userMoney = doc.data().money;
         this.setState({money: userMoney, loading: false});
-        console.log(this.state.money);
       });
+    app.database().ref('/stocks').orderByKey().equalTo('A*').once('value').then((snap)=>{
+      snap.forEach((stockData) => {
+        console.log(stockData.key ,stockData.val());
+      });
+    });
   }
   render() {
-    const { loading, name, testData, money } = this.state;
+    const { loading, name, testData } = this.state;
     if (loading) {
       return (
         <div className="portfolio">
