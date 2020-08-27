@@ -66,12 +66,6 @@ class Search extends React.Component {
                                 portfolio: newPortfolio
                             });
                         }
-                        db.doc(email).update({
-                            money: newFunds,
-                            stocks: currentStockArray,
-                            invested: newInvested,
-                            portfolio: newPortfolio
-                        })
                     }
                     alert("Successfully bought stocks!");
                     let div = document.getElementById('cards');
@@ -83,76 +77,90 @@ class Search extends React.Component {
 
         });
     }
-    handleSearch = (event) => {
-        event.preventDefault();
-        this.setState({loading: true});
-        const { stock } = event.target.elements;
+    async makeAPICall(stockData) {
+        let apiFile = require("../Utilities/env.json");
+        let randomInt = Math.floor(Math.random() * 5);
+        let apiKey = apiFile["api_key"][randomInt];
+        let baseUrl = apiFile["base_api_url"];
+        fetch(`${baseUrl}stable/stock/market/batch?symbols=${stockData.key.replace('_P', '.').replace('_D', '$')}&types=quote&token=${apiKey}`, {
+            "method": "GET"
+        })
+        .then(response => {
+            return response.json();
+        })
+        .then(async (data) => {
+            let tempData = new Object;
+            tempData.company = data[stockData.key].quote.companyName;
+            tempData.change = data[stockData.key].quote.change;
+            tempData.changePercent = (parseFloat(data[stockData.key].quote.changePercent).toFixed(3)).toString();
+            tempData.latestPrice = data[stockData.key].quote.latestPrice;
+            if (data[stockData.key].quote.iexLastUpdated == -1 || data[stockData.key].quote.iexLastUpdated == 0){
+                tempData.latestTime = new Date(data[stockData.key].quote.latestTime);
+            }
+            else {
+                tempData.latestTime = new Date(data[stockData.key].quote.iexLastUpdated)
+            }
+            await app.database().ref(`/stocks/`+stockData.key).set(tempData);
+        })
+        .catch(err => {
+            console.log(err);
+        });
+    }
+    async getStockData(names) {
+        let data = {};
+        for(let stock of names){
+            await app.database().ref(`/stocks/${stock}`).once('value')
+                .then((snapshot) => {
+                data[stock] = snapshot.val();
+            })
+        }
+        setTimeout(() => {
+            this.setState({loading: false, sData: data});
+        }, 100)
+    }
+    async getStockNames(stock) {
+        let names = [];
         let startAlphabet = String.fromCharCode(stock.value.toUpperCase().charCodeAt(0));
         let endAlphabet = String.fromCharCode(stock.value.toUpperCase().charCodeAt(0) + 1);
-        app.database().ref('/stocks').orderByKey().startAt(`${startAlphabet}`).endAt(`${endAlphabet}`).once('value').then((snap)=>{
+        await app.database().ref('/stocks').orderByKey().startAt(`${startAlphabet}`).endAt(`${endAlphabet}`).once('value').then((snap)=>{
             let counter = 0;
-            let completeData = {};
             let stockName = stock.value;
             //Firebase keys have been encoded becuse firebase does not accept special characters like . and $ in the name of the key
             stockName = stockName.replace('.', '_P').replace('$', '_D');
-            let done = false;
+            let totalChildren = snap.numChildren();
+            let childCounter = 1;
             snap.forEach((stockData) => {
                 let patt = new RegExp(`^${stockName.toUpperCase()}`);
-                if (counter === 5){
-                    done = true;
-                }
                 if (counter < 5) {
                     if ((patt.test(stockData.key)) || patt.test(stockData.child('company').val().toUpperCase())){
+                        names.push(stockData.key);
                         let currentDate = new Date();
                         let stockDate;
                         if (stockData.child('latestTime').val() === null){
                             stockDate = new Date();
                         } else {
-                            stockDate = new Date(stockData.child('latestTime').val())
+                            stockDate = new Date(stockData.child('latestTime').val());
                         }
                         if(stockData.child('latestPrice').val() === null || Math.ceil((currentDate - stockDate)/(1000 * 60 * 60 * 24)) > 1){
-                            let apiFile = require("../Utilities/env.json");
-                            let randomInt = Math.floor(Math.random() * 5);
-                            let apiKey = apiFile["api_key"][randomInt];
-                            let baseUrl = apiFile["base_api_url"];
-                            fetch(`${baseUrl}stable/stock/market/batch?symbols=${stockData.key.replace('_P', '.').replace('_D', '$')}&types=quote&token=${apiKey}`, {
-                                "method": "GET"
-                            })
-                            .then(response => {
-                                return response.json();
-                            })
-                            .then(data => {
-                                let tempData = new Object;
-                                tempData.company = data[stockData.key].quote.companyName;
-                                tempData.change = data[stockData.key].quote.change;
-                                tempData.changePercent = (parseFloat(data[stockData.key].quote.changePercent).toFixed(3)).toString();
-                                tempData.latestPrice = data[stockData.key].quote.latestPrice;
-                                tempData.latestTime = data[stockData.key].quote.latestTime;
-                                completeData[stockData.key.replace('_P', '.').replace('_D', '$')] = tempData;
-                                app.database().ref(`/stocks/`+stockData.key).set(tempData);
-                            })
-                            .catch(err => {
-                                console.log(err);
-                            });
+                            this.makeAPICall(stockData);
                         }
                         counter++;
                     }
                 }
+                if (counter === 5 || childCounter >= totalChildren){
+                    return true;
+                }
+                childCounter++;
             });
-            setTimeout(()=>{
-                if(!done || Object.keys(completeData).length==0){
-                    setTimeout(() => {
-                        console.log('Second time!');
-                        this.setState({loading: false, sData: completeData});
-                    }, 1000)
-                }
-                else{
-                    console.log('First time!');
-                    this.setState({loading: false, sData: completeData});
-                }
-            }, 1000);
-            
           });
+        return names;
+    }
+    handleSearch = async(event) => {
+        event.preventDefault();
+        this.setState({loading: true});
+        const { stock } = event.target.elements;
+        let stockNames = await this.getStockNames(stock);
+        await this.getStockData(stockNames);
     }
     render() {
         const { loading, sData } = this.state;

@@ -4,7 +4,7 @@ import Loader from 'react-loader-spinner';
 import { Card } from "react-bootstrap";
 import app from "../Utilities/firebase";
 
-class Home extends React.Component {
+class Sell extends React.Component {
   constructor(){
     super();
     this.state= {
@@ -16,7 +16,61 @@ class Home extends React.Component {
       testData: {}
     }
   }
+  sellStock = async(event) => {
+    event.preventDefault();
+    let { number } = event.target.elements;
+    let stock = number.id;
+    if (number.value === ''){
+        alert("Please enter number of stocks you wish to sell.");
+        return;
+    }
+    let email = app.auth().currentUser.email;
+    let db = app.firestore().collection("leaderboard")
+    db.doc(email).get()
+    .then((doc) => {
+        if(this.state.testData[number.id].number < number.value) {
+          alert("Insufficient stocks!");
+        }
+        else{
+          let currentFunds = doc.data().money;
+          app.database().ref('/stocks/'+number.id).once('value').then((snap) => {
+              let totalAmt = snap.val().latestPrice * parseInt(number.value);
+                let newFunds = (currentFunds + (snap.val().latestPrice * parseInt(number.value))).toFixed(2);
+                let newNum = parseInt(doc.data().stocks[number.id]) - parseInt(number.value);
+                newFunds = parseFloat(newFunds);
+                let newInvested = parseFloat((doc.data().invested - snap.val().latestPrice * parseInt(number.value)).toFixed(2));
+                let newPortfolio = parseFloat((doc.data().portfolio - snap.val().latestPrice * parseInt(number.value)).toFixed(2));
+                let currentStockArray = doc.data().stocks;
+                if(newNum == 0) {
+                  delete currentStockArray[number.id];
+                  db.doc(email).update({
+                    money: newFunds,
+                    stocks: currentStockArray,
+                    invested: newInvested,
+                    portfolio: newPortfolio
+                  });
+                }
+                else {
+                  currentStockArray[number.id] = newNum;
+                  db.doc(email).update({
+                    money: newFunds,
+                    stocks: currentStockArray,
+                    invested: newInvested,
+                    portfolio: newPortfolio
+                  });
+                }
+                let inputID = number.id;
+                console.log(inputID);
+                console.log(document.getElementsByTagName('input'));
+                document.getElementById(number.id).value = "";
+                alert("Successfully sold stocks!");
+  
+          });
+        }
 
+
+    });
+}
   getUser = async() => {
     let email = app.auth().currentUser.email;
     app.firestore().collection("users").doc(email)
@@ -32,14 +86,15 @@ class Home extends React.Component {
     app.firestore().collection("leaderboard").doc(email)
       .onSnapshot( async (doc) => {
         let stonks = doc.data().stocks;
-        let info = await this.getStonks(stonks)
-        await this.setState({testData: info})
+        let info = await this.getStonks(stonks);
         let portfolioVal = 0;
         let investVal = doc.data().invested;
         for(let values in info){
+          let num = parseInt(stonks[info[values].ticker]);
+          info[values].number = num;
           portfolioVal += (info[values].price) * (stonks[info[values].ticker])
         }
-        this.setState({portfolioValue: portfolioVal.toFixed(2), investedValue: investVal, loading: false});
+        this.setState({portfolioValue: portfolioVal.toFixed(2), investedValue: investVal, loading: false, testData: info});
         app.firestore().collection("leaderboard").doc(email).update({
           portfolio: parseFloat(portfolioVal.toFixed(2))
         });
@@ -87,13 +142,15 @@ class Home extends React.Component {
       await app.database().ref(`/stocks/${stockName}`).once('value')
       .then((snapshot) => {
         let value = {
+          company: snapshot.val().company,
           price: snapshot.val().latestPrice,
           change: snapshot.val().change,
           changepercent: snapshot.val().changePercent,
           ticker: stonk
         }
-        info[`${snapshot.val().company}`] = value
-    })}
+        info[`${stonk}`] = value
+    })
+    }
     return info
   }
 
@@ -120,7 +177,9 @@ class Home extends React.Component {
             <Card className="text-center" style={{margin: "10px"}}>
               <Card.Body>
                 <Card.Title>{data}</Card.Title>
+                <Card.Title>{testData[data].company}</Card.Title>
                 <Card.Subtitle className="mb-2 text-muted">Current Price: ${testData[data].price}</Card.Subtitle>
+                <Card.Subtitle className="mb-2 text-muted">Quantity: {testData[data].number}</Card.Subtitle>
                 {testData[data].change > 0 ? (
                   <div>
                     <Card.Text style={{color: 'green'}}>Daily Change is ${testData[data].change}</Card.Text>
@@ -132,6 +191,10 @@ class Home extends React.Component {
                     <Card.Text style={{color: 'red'}}>Percentage Change is {testData[data].changepercent}%</Card.Text>
                   </div>
               )}
+              <form id={"submit"+{data}} onSubmit={this.sellStock}>
+                <input id={data} type='number' name="number" />
+                <button type='submit'>Sell</button>
+              </form>
               </Card.Body>
             </Card>
               );
@@ -145,4 +208,4 @@ class Home extends React.Component {
   }
 }
 
-export default Home;
+export default Sell;
