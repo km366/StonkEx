@@ -94,7 +94,6 @@ class LeaderBoard extends React.Component {
                   data.push(d);
                   m.push(parseFloat(doc.data().money+doc.data().portfolio).toFixed(2));
             });
-            console.log(data);
             let temp = data.sort(function(a, b) {
                 return (b.money + b.portfolio) - (a.money + a.portfolio)
             });

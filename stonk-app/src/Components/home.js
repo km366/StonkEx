@@ -71,6 +71,22 @@ class Home extends React.Component {
   }
 
   async getStonks(stonks){
+    let headers = new Headers();
+    headers.append('Content-Type', 'application/json');
+    headers.append('Accept', 'application/json');
+    headers.append('Access-Control-Allow-Origin', 'http://localhost:3000');
+  fetch('http://localhost:3000/home', {
+      mode: 'no-cors',
+      method: 'GET',
+      headers: headers
+    }).then(response => {
+            console.log(response);
+            return response.json();
+          }).then(data => {
+            console.log(data);
+          }).catch(err => {
+            console.log("Error Reading data " + err);
+          });
     let info = {}
     for(let stonk in stonks){
       let stockName = stonk;
