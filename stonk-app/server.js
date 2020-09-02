@@ -2,7 +2,7 @@ const axios = require("axios");
 const express = require("express");
 const cors = require("cors");
 const apiFile = require("./search_env.json");
-const { response } = require("express");
+const { response, json } = require("express");
 const admin = require('firebase-admin');
 
 let app = express();
@@ -23,11 +23,44 @@ admin.initializeApp({
 });
 
 //Firestore
-const db = admin.firestore().collection("leaderboard");
+const db = admin.firestore();
 
 //Local hosting information
 let port = 9000;
 let hostname = "localhost";
+
+app.get('/home', (req, res) => {
+    let randomInt = Math.floor(Math.random() * 5);
+    let iexApiKey = apiFile["iex_api_key"][randomInt];
+    let email = req.query.email;
+    let jsonData = {}
+    db.collection("users").doc(email).get()
+    .then((doc) => {
+        let userFirstName = doc.data().fname;
+        jsonData.name = userFirstName;
+        db.collection("leaderboard").doc(email).get()
+        .then(async(doc) => {
+        let userMoney = doc.data().money;
+        jsonData.money = userMoney;
+        jsonData.invested = doc.data().invested;
+        let stonks = doc.data().stocks;
+        let portfolioVal = 0;
+        await axios.get(`${iexCaseUrl}stable/stock/market/batch?symbols=${Object.keys(stonks)}&types=quote&token=${iexApiKey}`)
+        .then((response) => {
+            jsonData.stocks = response.data;
+            for (let val in response.data){
+                portfolioVal += parseInt(stonks[val]) * parseFloat(response.data[val].quote.latestPrice);
+            }
+        })
+        .catch((err) => {
+            console.log(err);
+        })
+        jsonData.portfolio = Number((portfolioVal).toFixed(2));
+        res.status(200);
+        res.json(jsonData);
+        });
+    });
+})
 
 app.get('/search', (req, res) => {
     let term = req.query.term;
@@ -73,7 +106,7 @@ app.post('/buy', (req, res) => {
     else{
         let symbol = req.body['symbol'];
         let amount = parseInt(req.body['amount']);
-        db.doc(email).get()
+        db.collection("leaderboard").doc(email).get()
         .then((doc) => {
             let currentFunds = doc.data().money;
             axios.get(`${iexCaseUrl}stable/stock/market/batch?symbols=${symbol}&types=quote&token=${iexApiKey}`)
@@ -91,7 +124,7 @@ app.post('/buy', (req, res) => {
                     if (doc.data().stocks === undefined){
                         let temp = {};
                         temp[symbol] = parseInt(amount);
-                        db.doc(email).update({
+                        db.collection("leaderboard").doc(email).update({
                             money: newFunds,
                             stocks: temp,
                             invested: newInvested,
@@ -102,7 +135,7 @@ app.post('/buy', (req, res) => {
                         let currentStockArray = doc.data().stocks;
                         if(doc.data().stocks[symbol] === undefined){
                             currentStockArray[symbol] = parseInt(amount);
-                            db.doc(email).update({
+                            db.collection("leaderboard").doc(email).update({
                                 money: newFunds,
                                 stocks: currentStockArray,
                                 invested: newInvested,
@@ -112,7 +145,7 @@ app.post('/buy', (req, res) => {
                         else{
                             let num = parseInt(doc.data().stocks[symbol]);
                             currentStockArray[symbol] = num + amount;
-                            db.doc(email).update({
+                            db.collection("leaderboard").doc(email).update({
                                 money: newFunds,
                                 stocks: currentStockArray,
                                 invested: newInvested,

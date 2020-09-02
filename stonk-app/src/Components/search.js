@@ -106,7 +106,7 @@ class Search extends React.Component {
                             <Card className="text-center" style={{margin: "10px"}}>
                                 <Card.Body>
                                     <Card.Title>{data}</Card.Title>
-                                    <Card.Subtitle className="mb-2 text-muted">Comapany: {sData[data].quote.symbol}</Card.Subtitle>
+                                    <Card.Subtitle className="mb-2">{sData[data].quote.companyName}</Card.Subtitle>
                                     <Card.Text>Current price: <b>${sData[data].quote.latestPrice}</b></Card.Text>
                                     {sData[data].quote.change > 0 ? (
                                         <div>
