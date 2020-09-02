@@ -55,6 +55,9 @@ app.get('/home', (req, res) => {
         .catch((err) => {
             console.log(err);
         })
+        db.collection("leaderboard").doc(email).update({
+            portfolio: Number((portfolioVal).toFixed(2))
+        });
         jsonData.portfolio = Number((portfolioVal).toFixed(2));
         res.status(200);
         res.json(jsonData);
