@@ -24,6 +24,10 @@ class Search extends React.Component {
                 this.setState({loading: false, sData: res.data, message: ""});
             }
         })
+        .catch((err) => {
+            alert("Error");
+            this.setState({loading: false});
+        })
     }
     buyStock = async(event) => {
         event.preventDefault();
