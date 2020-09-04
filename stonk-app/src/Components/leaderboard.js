@@ -52,7 +52,7 @@ class LeaderBoard extends React.Component {
                             <tr>
                                 <th>Rank</th>
                                 <th>Name</th>
-                                <th>Current Account Balance</th>
+                                <th>Current Account Value</th>
                             </tr>
                         </thead>
                         <tbody>

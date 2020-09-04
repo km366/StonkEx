@@ -5,6 +5,7 @@ import Login from '../Components/login';
 import Register from '../Components/register';
 import Home from '../Components/home';
 import Sell from '../Components/sell';
+import About from '../Components/about';
 import Leaderboard from '../Components/leaderboard';
 import Search from '../Components/search';
 import { AuthProvider } from "./Auth";
@@ -15,11 +16,12 @@ const Routes = withRouter(({ location }) => {
         <Router>
           <div>
             <Switch>
-                <PrivateRoute exact path="/" component={Home} />
+                <Route exact path="/" component={About} />
                 <PrivateRoute exact path="/home" component={Home}/>
                 <PrivateRoute exact path="/leaderboard" component={Leaderboard} />
                 <PrivateRoute exact path="/search" component={Search} />
                 <PrivateRoute exact path="/sell" component={Sell} />
+                <Route exact path="/about" component={About} />
                 <Route exact path="/login" component={Login} />
                 <Route exact path="/register" component={Register}/>
             </Switch>

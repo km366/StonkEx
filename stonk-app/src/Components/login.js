@@ -15,7 +15,7 @@ const Login = ({ history }) => {
             () => {
               const user = app.auth().currentUser;
               if (user.emailVerified) {
-                history.push("/");
+                history.push("/home");
               } else {
                 alert('Please verify your email first!');
               }
@@ -30,7 +30,7 @@ const Login = ({ history }) => {
   const { currentUser } = useContext(AuthContext);
 
   if (currentUser && currentUser.emailVerified) {
-    return <Redirect to="/" />;
+    return <Redirect to="/home" />;
   }
 
   return (
@@ -48,9 +48,6 @@ const Login = ({ history }) => {
             </div>
 
             <button type="submit" className="btn btn-primary btn-block">Submit</button>
-            <p className="forgot-password text-right">
-                Forgot <a href="#">password?</a>
-            </p>
         </form>
         <h5>New User?</h5>
         <NavLink to="/register">Register Here</NavLink>
