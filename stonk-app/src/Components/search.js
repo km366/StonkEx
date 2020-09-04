@@ -17,14 +17,20 @@ class Search extends React.Component {
         fetch(`http://localhost:9000/search?term=${term}`)
         .then(res => res.json())
         .then((res) => {
-            if(res.message === "No results") {
-                this.setState({loading: false, message: res.message});
+            if(res.message === "Found") {
+                if (res.data[Object.keys(res.data)[0]].quote === null){
+                    this.setState({loading: false, sData: {} , message: "Error. Try again later."});
+                }
+                else{
+                    this.setState({loading: false, sData: res.data, message: ""});
+                }
             }
             else{
-                this.setState({loading: false, sData: res.data, message: ""});
+                this.setState({loading: false, message: res.message});
             }
         })
         .catch((err) => {
+            console.log(err);
             alert("Error");
             this.setState({loading: false});
         })
@@ -36,9 +42,16 @@ class Search extends React.Component {
             alert("Please enter number of stocks you wish to buy.");
             return;
         }
-        let email = app.auth().currentUser.email;
+        let id = "";
+        await app.auth().currentUser.getIdToken(/* forceRefresh */ true).then(function(idToken) {
+            id = idToken;
+        })
+        .catch((err) => {
+            this.setState({loading: false});
+            alert("Error");
+        })
         let user = {
-            user: email,
+            user: id,
             symbol: number.id,
             amount: number.value
         };
@@ -76,14 +89,14 @@ class Search extends React.Component {
                     <h1>Search for Stocks</h1>
                     <form onSubmit={this.handleSearch}>
                         <div className="form-group">
-                            <label>Stock Name</label>
+                            <label>Stock Symbol</label>
                             <input type="text" name="stock" className="form-control" placeholder="Enter stock to buy" />
                         </div>
 
                         <button type="submit" className="btn btn-primary btn-block">Search</button>
                     </form>
                     <p>Don't see the stock you're looking for?</p>
-                    <p>Try a more detailed search!</p>
+                    <p>Search for the exact stock symbol!</p>
                     <Loader type="Circles" color="#2BAD60" height="50" width="50" />
                 </div>
             )
@@ -142,7 +155,7 @@ class Search extends React.Component {
                     textAlign: 'center'
                 }}>
                     <p>Don't see the stock you're looking for?</p>
-                    <p>Try a more detailed search!</p>
+                    <p>Search for the exact stock symbol!</p>
                 </footer>
             </div>
         )

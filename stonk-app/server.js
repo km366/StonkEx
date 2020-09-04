@@ -9,6 +9,7 @@ let app = express();
 
 app.use(express.json())
 app.use(cors());
+app.use(express.static("public"));
 
 //API URL's and keys
 let alphaApiKey = apiFile["alpha_api_key"];
@@ -29,153 +30,166 @@ const db = admin.firestore();
 let port = 9000;
 let hostname = "localhost";
 
-app.get('/home', (req, res) => {
-    let randomInt = Math.floor(Math.random() * apiFile["iex_api_key"].length);
-    let iexApiKey = apiFile["iex_api_key"][randomInt];
-    let email = req.query.email;
-    let jsonData = {}
-    db.collection("users").doc(email)
-    .onSnapshot((doc) => {
-        let userFirstName = doc.data().fname;
-        jsonData.name = userFirstName;
-        db.collection("leaderboard").doc(email).get()
-        .then(async(doc) => {
-        let userMoney = doc.data().money;
-        jsonData.money = userMoney;
-        jsonData.invested = doc.data().invested;
-        let stonks = doc.data().stocks;
-        let portfolioVal = 0;
-        await axios.get(`${iexCaseUrl}stable/stock/market/batch?symbols=${Object.keys(stonks)}&types=quote&token=${iexApiKey}`)
-        .then((response) => {
-            jsonData.stocks = response.data;
-            for (let val in response.data){
-                jsonData.stocks[val]['quantity'] = Number(stonks[val]);
-                portfolioVal += parseInt(stonks[val]) * parseFloat(response.data[val].quote.latestPrice);
-            }
+app.get('/home', async(req, res) => {
+    let idToken = req.query.token;
+    await admin.auth().verifyIdToken(idToken)
+    .then(function(decodedToken) {
+        let uid = decodedToken.uid;
+        admin.auth().getUser(uid)
+        .then(function(userRecord) {
+            let randomInt = Math.floor(Math.random() * apiFile["iex_api_key"].length);
+            let iexApiKey = apiFile["iex_api_key"][randomInt];
+            let email = userRecord.toJSON().email;
+            let jsonData = {}
+            db.collection("users").doc(email)
+            .onSnapshot((doc) => {
+                let userFirstName = doc.data().fname;
+                jsonData.name = userFirstName;
+                db.collection("leaderboard").doc(email).get()
+                .then(async(doc) => {
+                let userMoney = doc.data().money;
+                jsonData.money = userMoney;
+                jsonData.invested = doc.data().invested;
+                let stonks = doc.data().stocks;
+                let portfolioVal = 0;
+                await axios.get(`${iexCaseUrl}stable/stock/market/batch?symbols=${Object.keys(stonks)}&types=quote&token=${iexApiKey}`)
+                .then((response) => {
+                    jsonData.stocks = response.data;
+                    for (let val in response.data){
+                        jsonData.stocks[val]['quantity'] = Number(stonks[val]);
+                        portfolioVal += parseInt(stonks[val]) * parseFloat(response.data[val].quote.latestPrice);
+                    }
+                })
+                .catch((err) => {
+                    res.status(400);
+                    res.send("Error!");
+                })
+                db.collection("leaderboard").doc(email).update({
+                    portfolio: Number((portfolioVal).toFixed(2))
+                });
+                jsonData.portfolio = Number((portfolioVal).toFixed(2));
+                res.status(200);
+                res.json(jsonData);
+                });
+            });
         })
-        .catch((err) => {
-            console.log(err);
-        })
-        db.collection("leaderboard").doc(email).update({
-            portfolio: Number((portfolioVal).toFixed(2))
+        .catch(function(error) {
+            res.status(400);
+            res.send("Error!");
         });
-        jsonData.portfolio = Number((portfolioVal).toFixed(2));
-        res.status(200);
-        res.json(jsonData);
-        });
+        // ...
+    }).catch(function(error) {
+        res.status(400);
+        res.send("Error!");
     });
 })
 
-app.get('/search', (req, res) => {
+app.get('/search', async(req, res) => {
     let term = req.query.term;
     let randomInt = Math.floor(Math.random() * apiFile["iex_api_key"].length);
     let iexApiKey = apiFile["iex_api_key"][randomInt];
     let jsonData = {}
-    axios.get(`${alphaBaseUrl}function=SYMBOL_SEARCH&keywords=${term}&apikey=${alphaApiKey}`)
+    await axios.get(`${iexCaseUrl}stable/stock/market/batch?symbols=${term}&types=quote&token=${iexApiKey}`)
     .then((response) => {
+        jsonData.data = response.data;
+        jsonData.message = "Found";
         res.status(200);
-        if(response.data.bestMatches.length === 0){
-            jsonData.message = "No results";
-            res.json(jsonData);
-        }
-        else {
-            stockArr = [];
-            for (let stock of response.data.bestMatches){
-                stockArr.push(stock['1. symbol']);
-            }
-            axios.get(`${iexCaseUrl}stable/stock/market/batch?symbols=${stockArr}&types=quote&token=${iexApiKey}`)
-            .then((resp) => {
-                jsonData.message = "Found results";
-                jsonData.data = resp.data;
-                res.json(jsonData);
-            })
-
-        }
-        console.log("Sent data to client");
+        res.json(jsonData);
     })
     .catch((err) => {
-        res.status(400);
-        console.log(err);
+        jsonData.message = err.response.statusText;
+        res.status(200);
+        res.json(jsonData);
     })
 })
 
-app.post('/buy', (req, res) => {
-    let randomInt = Math.floor(Math.random() * apiFile["iex_api_key"].length);
-    let iexApiKey = apiFile["iex_api_key"][randomInt];
-    let email = req.body['user'];
-    if(email === undefined){
-        res.status(400);
-        res.send("Missing email");
-    }
-    else{
-        let symbol = req.body['symbol'];
-        let amount = parseInt(req.body['amount']);
-        db.collection("leaderboard").doc(email).get()
-        .then((doc) => {
-            let currentFunds = doc.data().money;
-            axios.get(`${iexCaseUrl}stable/stock/market/batch?symbols=${symbol}&types=quote&token=${iexApiKey}`)
-            .then((snap) => {
-                let totalAmt = parseFloat(snap.data[symbol].quote.latestPrice) * amount;
-                if(amount < 1) {
-                    res.status(200);
-                    res.send("Invalid input for amount!");
-                }
-                if(totalAmt > currentFunds){
-                    res.status(200);
-                    res.send("Insufficient Funds!")
-                }
-                else{
-                    let newFunds = (currentFunds - (snap.data[symbol].quote.latestPrice * parseInt(amount))).toFixed(2);
-                    newFunds = parseFloat(newFunds);
-                    let newInvested = parseFloat((doc.data().invested + snap.data[symbol].quote.latestPrice * amount).toFixed(2));
-                    let newPortfolio = parseFloat((doc.data().portfolio + snap.data[symbol].quote.latestPrice * amount).toFixed(2));
-                    if (doc.data().stocks === undefined){
-                        let temp = {};
-                        temp[symbol] = Number(amount);
-                        db.collection("leaderboard").doc(email).update({
-                            money: newFunds,
-                            stocks: temp,
-                            invested: newInvested,
-                            portfolio: newPortfolio
-                        });
+app.post('/buy', async(req, res) => {
+    let idToken = req.body['user'];
+    await admin.auth().verifyIdToken(idToken)
+    .then(function(decodedToken) {
+        let uid = decodedToken.uid;
+        admin.auth().getUser(uid)
+        .then(function(userRecord) {
+            let randomInt = Math.floor(Math.random() * apiFile["iex_api_key"].length);
+            let iexApiKey = apiFile["iex_api_key"][randomInt];
+            let email = userRecord.toJSON().email;
+            let symbol = req.body['symbol'];
+            let amount = parseInt(req.body['amount']);
+            db.collection("leaderboard").doc(email).get()
+            .then((doc) => {
+                let currentFunds = doc.data().money;
+                axios.get(`${iexCaseUrl}stable/stock/market/batch?symbols=${symbol}&types=quote&token=${iexApiKey}`)
+                .then((snap) => {
+                    let totalAmt = parseFloat(snap.data[symbol].quote.latestPrice) * amount;
+                    if(amount < 1) {
+                        res.status(200);
+                        res.send("Invalid input for amount!");
                     }
-                    else {
-                        let currentStockArray = doc.data().stocks;
-                        if(doc.data().stocks[symbol] === undefined){
-                            currentStockArray[symbol] = Number(amount);
+                    if(totalAmt > currentFunds){
+                        res.status(200);
+                        res.send("Insufficient Funds!")
+                    }
+                    else{
+                        let newFunds = (currentFunds - (snap.data[symbol].quote.latestPrice * parseInt(amount))).toFixed(2);
+                        newFunds = parseFloat(newFunds);
+                        let newInvested = parseFloat((doc.data().invested + snap.data[symbol].quote.latestPrice * amount).toFixed(2));
+                        let newPortfolio = parseFloat((doc.data().portfolio + snap.data[symbol].quote.latestPrice * amount).toFixed(2));
+                        if (doc.data().stocks === undefined){
+                            let temp = {};
+                            temp[symbol] = Number(amount);
                             db.collection("leaderboard").doc(email).update({
                                 money: newFunds,
-                                stocks: currentStockArray,
+                                stocks: temp,
                                 invested: newInvested,
                                 portfolio: newPortfolio
                             });
                         }
-                        else{
-                            let num = Number(doc.data().stocks[symbol]);
-                            currentStockArray[symbol] = Number(num + amount);
-                            db.collection("leaderboard").doc(email).update({
-                                money: newFunds,
-                                stocks: currentStockArray,
-                                invested: newInvested,
-                                portfolio: newPortfolio
-                            });
+                        else {
+                            let currentStockArray = doc.data().stocks;
+                            if(doc.data().stocks[symbol] === undefined){
+                                currentStockArray[symbol] = Number(amount);
+                                db.collection("leaderboard").doc(email).update({
+                                    money: newFunds,
+                                    stocks: currentStockArray,
+                                    invested: newInvested,
+                                    portfolio: newPortfolio
+                                });
+                            }
+                            else{
+                                let num = Number(doc.data().stocks[symbol]);
+                                currentStockArray[symbol] = Number(num + amount);
+                                db.collection("leaderboard").doc(email).update({
+                                    money: newFunds,
+                                    stocks: currentStockArray,
+                                    invested: newInvested,
+                                    portfolio: newPortfolio
+                                });
+                            }
                         }
+                        res.status(200);
+                        res.send("Bought stocks!");
                     }
-                    res.status(200);
-                    res.send("Bought stocks!");
-                }
+                })
+                .catch((err) => {
+                    res.status(400);
+                    res.send("Error");
+                });
+
             })
             .catch((err) => {
                 res.status(400);
                 res.send("Error");
             });
-
         })
         .catch((err) => {
             res.status(400);
             res.send("Error");
         });
-    }
+    })
+    .catch((err) => {
+        res.status(400);
+        res.send("Error");
+    });
 })
 
 app.get('/leaderboard', async(req, res) => {
@@ -244,6 +258,7 @@ app.get('/leaderboard', async(req, res) => {
             p.name = user.name;
             p.currentSum = user.currentSum;
             p.rank = user.rank;
+            p.email = user.email;
             lb.push(p);
         }
     })
@@ -268,14 +283,14 @@ app.post('/sell', (req, res) => {
     }
     else{
         let symbol = req.body['symbol'];
-        let amount = req.body['amount'];
+        let amount = Number(req.body['amount']);
         db.collection("leaderboard").doc(email).get()
         .then((doc) => {
             if(amount < 1) {
                 res.status(200);
                 res.send("Invalid input for amount!");
             }
-            else if(amount > doc.data().stocks[symbol]) {
+            else if(amount > Number(doc.data().stocks[symbol])) {
                 res.status(200);
                 res.send("Insufficient stocks!");
             }
@@ -284,10 +299,10 @@ app.post('/sell', (req, res) => {
                 axios.get(`${iexCaseUrl}stable/stock/market/batch?symbols=${symbol}&types=quote&token=${iexApiKey}`)
                 .then((response) => {
                     let totalAmt = response.data[symbol].quote.latestPrice * parseInt(amount);
-                    let newFunds = Number((currentFunds + (response.data[symbol].quote.latestPrice * parseInt(amount))).toFixed(2));
-                    let newNum = parseInt(doc.data().stocks[symbol]) - parseInt(amount);
-                    let newInvested = parseFloat((doc.data().invested - response.data[symbol].quote.latestPrice * parseInt(amount)).toFixed(2));
-                    let newPortfolio = parseFloat((doc.data().portfolio - response.data[symbol].quote.latestPrice * parseInt(amount)).toFixed(2));
+                    let newFunds = Number((currentFunds + (response.data[symbol].quote.latestPrice * Number(amount))).toFixed(2));
+                    let newNum = Number(doc.data().stocks[symbol]) - Number(amount);
+                    let newInvested = Number(parseFloat((doc.data().invested - response.data[symbol].quote.latestPrice * Number(amount)).toFixed(2)));
+                    let newPortfolio = Number(parseFloat((doc.data().portfolio - response.data[symbol].quote.latestPrice * Number(amount)).toFixed(2)));
                     let currentStockArray = doc.data().stocks;
                     if(newNum == 0) {
                         delete currentStockArray[symbol];
@@ -311,45 +326,6 @@ app.post('/sell', (req, res) => {
                     res.send("Success!");
                 })
             }
-            /*
-            else{
-            let currentFunds = doc.data().money;
-
-            app.database().ref('/stocks/'+number.id).once('value').then((snap) => {
-                let totalAmt = snap.val().latestPrice * parseInt(number.value);
-                    let newFunds = (currentFunds + (snap.val().latestPrice * parseInt(number.value))).toFixed(2);
-                    let newNum = parseInt(doc.data().stocks[number.id]) - parseInt(number.value);
-                    newFunds = parseFloat(newFunds);
-                    let newInvested = parseFloat((doc.data().invested - snap.val().latestPrice * parseInt(number.value)).toFixed(2));
-                    let newPortfolio = parseFloat((doc.data().portfolio - snap.val().latestPrice * parseInt(number.value)).toFixed(2));
-                    let currentStockArray = doc.data().stocks;
-                    if(newNum == 0) {
-                    delete currentStockArray[number.id];
-                    db.collection("leaderboard").doc(email).update({
-                        money: newFunds,
-                        stocks: currentStockArray,
-                        invested: newInvested,
-                        portfolio: newPortfolio
-                    });
-                    }
-                    else {
-                    currentStockArray[number.id] = newNum;
-                    db.collection("leaderboard").doc(email).update({
-                        money: newFunds,
-                        stocks: currentStockArray,
-                        invested: newInvested,
-                        portfolio: newPortfolio
-                    });
-                    }
-                    let inputID = number.id;
-                    console.log(inputID);
-                    console.log(document.getElementsByTagName('input'));
-                    document.getElementById(number.id).value = "";
-                    alert("Successfully sold stocks!");
-    
-            });
-            }
-            */
         })
     }
 })

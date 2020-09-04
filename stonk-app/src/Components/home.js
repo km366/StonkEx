@@ -16,13 +16,20 @@ class Home extends React.Component {
       testData: {}
     }
   }
-  serverCall(){
-    let email = app.auth().currentUser.email;
-    fetch(`http://localhost:9000/home?email=${email}`)
+  async serverCall(){
+    let id = "";
+    await app.auth().currentUser.getIdToken(/* forceRefresh */ true).then(function(idToken) {
+      id = idToken;
+    })
+    .catch((err) => {
+      this.setState({loading: false});
+      alert("Error");
+    })
+    await fetch(`http://localhost:9000/home?token=${id}`)
         .then(res => res.json())
         .then((res) => {
             this.setState({name: res.name, money: res.money, portfolioValue: res.portfolio, investedValue: res.invested, testData:res.stocks, loading: false});
-        })
+    })
   }
   render() {
     const { loading, name, testData } = this.state;

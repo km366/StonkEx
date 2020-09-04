@@ -13,7 +13,7 @@ class LeaderBoard extends React.Component {
             currentUser: ""
         }
     }
-    serverCall(){
+    async serverCall(){
         let email = app.auth().currentUser.email;
         fetch('http://localhost:9000/leaderboard')
         .then(res => res.json())
