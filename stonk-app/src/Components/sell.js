@@ -25,7 +25,7 @@ class Sell extends React.Component {
       this.setState({loading: false});
       alert("Error");
     })
-    await fetch(`http://localhost:9000/home?token=${id}`)
+    await fetch(`https://shielded-caverns-36784.herokuapp.com/home?token=${id}`)
         .then(res => res.json())
         .then((res) => {
             this.setState({name: res.name, money: res.money, portfolioValue: res.portfolio, investedValue: res.invested, testData:res.stocks, loading: false});
@@ -49,7 +49,7 @@ class Sell extends React.Component {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(user)
     };
-    fetch(`http://localhost:9000/sell`,requestOptions)
+    fetch(`https://shielded-caverns-36784.herokuapp.com/sell`,requestOptions)
       .then(response => response.text())
       .then((data) => {
           let message = data;

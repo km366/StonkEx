@@ -14,7 +14,7 @@ class Search extends React.Component {
         };
     }
     searchCall(term) {
-        fetch(`http://localhost:9000/search?term=${term}`)
+        fetch(`https://shielded-caverns-36784.herokuapp.com/search?term=${term}`)
         .then(res => res.json())
         .then((res) => {
             if(res.message === "Found") {
@@ -60,19 +60,23 @@ class Search extends React.Component {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(user)
         };
-        fetch(`http://localhost:9000/buy`,requestOptions)
+        this.setState({loading: true});
+        await fetch(`https://shielded-caverns-36784.herokuapp.com/buy`,requestOptions)
             .then(response => response.text())
             .then((data) => {
                 let message = data;
+                this.setState({loading: false});
                 alert(message);
             })
             .catch((error) => {
+                this.setState({loading: false});
                 alert(error);
+                
             });
-            let div = document.getElementById('cards');
-            while(div.lastChild){
-                div.removeChild(div.lastChild);
-            }
+        let div = document.getElementById('cards');
+        while(div.lastChild){
+            div.removeChild(div.lastChild);
+        }
     }
     handleSearch = async(event) => {
         event.preventDefault();

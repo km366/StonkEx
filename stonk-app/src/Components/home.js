@@ -25,11 +25,17 @@ class Home extends React.Component {
       this.setState({loading: false});
       alert("Error");
     })
-    await fetch(`http://localhost:9000/home?token=${id}`)
-        .then(res => res.json())
-        .then((res) => {
-            this.setState({name: res.name, money: res.money, portfolioValue: res.portfolio, investedValue: res.invested, testData:res.stocks, loading: false});
-    })
+    if (id === ""){
+      this.setState({loading: false});
+      alert("Failed to load page!");
+    }
+    else{
+      await fetch(`https://shielded-caverns-36784.herokuapp.com/home?token=${id}`)
+      .then(res => res.json())
+      .then((res) => {
+          this.setState({name: res.name, money: res.money, portfolioValue: res.portfolio, investedValue: res.invested, testData:res.stocks, loading: false});
+      })
+    }
   }
   render() {
     const { loading, name, testData } = this.state;

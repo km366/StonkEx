@@ -15,7 +15,7 @@ class LeaderBoard extends React.Component {
     }
     async serverCall(){
         let email = app.auth().currentUser.email;
-        fetch('http://localhost:9000/leaderboard')
+        fetch('https://shielded-caverns-36784.herokuapp.com/leaderboard')
         .then(res => res.json())
         .then((res) => {
             if(res.message === "Success"){
