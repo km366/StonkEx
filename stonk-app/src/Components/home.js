@@ -13,7 +13,7 @@ class Home extends React.Component {
       money: 0,
       portfolioValue: 0,
       investedValue: 0,
-      testData: {}
+      stockData: {}
     }
   }
   async serverCall(){
@@ -33,12 +33,12 @@ class Home extends React.Component {
       await fetch(`https://shielded-caverns-36784.herokuapp.com/home?token=${id}`)
       .then(res => res.json())
       .then((res) => {
-          this.setState({name: res.name, money: res.money, portfolioValue: res.portfolio, investedValue: res.invested, testData:res.stocks, loading: false});
+          this.setState({name: res.name, money: res.money, portfolioValue: res.portfolio, investedValue: res.invested, stockData:res.stocks, loading: false});
       })
     }
   }
   render() {
-    const { loading, name, testData } = this.state;
+    const { loading, name, stockData } = this.state;
     if (loading) {
       return (
         <div className="portfolio">
@@ -55,22 +55,22 @@ class Home extends React.Component {
           <h3>Portfolio</h3>
           <h4 style={{color: 'grey'}}>Total Amount Invested: ${this.state.investedValue}</h4>
           <h4 style={{color: 'grey'}}>Total Asset Value: ${this.state.portfolioValue}</h4>
-          {Object.keys(testData).map((data, index) => {
+          {Object.keys(stockData).map((data, index) => {
           return (
             <Card className="text-center" style={{margin: "10px"}}>
               <Card.Body>
-                <Card.Title>{testData[data].quote.symbol}</Card.Title>
-                <Card.Subtitle className="mb-2">{testData[data].quote.companyName}</Card.Subtitle>
-                <Card.Subtitle className="mb-2 text-muted">Current Price: ${testData[data].quote.latestPrice}</Card.Subtitle>
-                {testData[data].quote.change > 0 ? (
+                <Card.Title>{stockData[data].quote.symbol}</Card.Title>
+                <Card.Subtitle className="mb-2">{stockData[data].quote.companyName}</Card.Subtitle>
+                <Card.Subtitle className="mb-2 text-muted">Current Price: ${stockData[data].quote.latestPrice}</Card.Subtitle>
+                {stockData[data].quote.change > 0 ? (
                   <div>
-                    <Card.Text style={{color: 'green'}}>Daily Change is ${testData[data].quote.change}</Card.Text>
-                    <Card.Text style={{color: 'green'}}>Percentage Change is {testData[data].quote.changePercent}%</Card.Text>
+                    <Card.Text style={{color: 'green'}}>Daily Change is ${stockData[data].quote.change}</Card.Text>
+                    <Card.Text style={{color: 'green'}}>Percentage Change is {stockData[data].quote.changePercent}%</Card.Text>
                   </div>
               ) : (
                   <div>
-                    <Card.Text style={{color: 'red'}}>Daily Change is ${testData[data].quote.change}</Card.Text>
-                    <Card.Text style={{color: 'red'}}>Percentage Change is {testData[data].quote.changePercent}%</Card.Text>
+                    <Card.Text style={{color: 'red'}}>Daily Change is ${stockData[data].quote.change}</Card.Text>
+                    <Card.Text style={{color: 'red'}}>Percentage Change is {stockData[data].quote.changePercent}%</Card.Text>
                   </div>
               )}
               </Card.Body>
